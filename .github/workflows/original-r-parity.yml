@@ -1,0 +1,70 @@
+name: Original R vs Python model-core comparison
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  original-r-parity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+    defaults:
+      run:
+        working-directory: SpatialPCA-Mathematical-Verification
+    steps:
+      - name: Require a private repository
+        working-directory: .
+        env:
+          IS_PRIVATE: ${{ github.event.repository.private }}
+        run: test "$IS_PRIVATE" = "true"
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Extract complete project archive
+        working-directory: .
+        run: unzip -q SpatialPCA-Python-with-Original-R-Runner.zip
+      - name: Check out immutable original R source
+        uses: actions/checkout@v4
+        with:
+          repository: shangll123/SpatialPCA
+          ref: 1d4dbb1fe6f23b77bb7ed805ce2de8bbc017ef66
+          path: SpatialPCA-Mathematical-Verification/upstream/SpatialPCA
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install Python requirements
+        run: python -m pip install -r requirements.txt
+      - name: Run mathematical and model tests
+        run: python -m pytest -q
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.4.3'
+          use-public-rspm: true
+      - name: Install R dependency
+        run: Rscript -e 'install.packages("RSpectra", repos="https://cloud.r-project.org")'
+      - name: Run original R and Python on nine matched cases
+        shell: bash
+        run: |
+          set -o pipefail
+          python scripts/run_parity_suite.py --output results/github_actions_suite 2>&1 | tee parity_suite.log
+      - name: Publish run summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f results/github_actions_suite/experiment_results.md ]; then
+            cat results/github_actions_suite/experiment_results.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload matrices, metrics, provenance and failure logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: original-r-python-comparison
+          path: |
+            SpatialPCA-Mathematical-Verification/results/github_actions_suite
+            SpatialPCA-Mathematical-Verification/parity_suite.log
+          if-no-files-found: warn
+          retention-days: 30
