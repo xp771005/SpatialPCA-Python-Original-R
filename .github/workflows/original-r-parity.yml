@@ -19,20 +19,20 @@ jobs:
         env:
           IS_PRIVATE: ${{ github.event.repository.private }}
         run: test "$IS_PRIVATE" = "true"
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
       - name: Extract complete project archive
         working-directory: .
         run: unzip -q SpatialPCA-Python-with-Original-R-Runner.zip
       - name: Check out immutable original R source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: shangll123/SpatialPCA
           ref: 1d4dbb1fe6f23b77bb7ed805ce2de8bbc017ef66
           path: SpatialPCA-Mathematical-Verification/upstream/SpatialPCA
           persist-credentials: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: pip
@@ -58,9 +58,15 @@ jobs:
           if [ -f results/github_actions_suite/experiment_results.md ]; then
             cat results/github_actions_suite/experiment_results.md >> "$GITHUB_STEP_SUMMARY"
           fi
+          if [ -f results/github_actions_suite/suite_results.json ]; then
+            echo '### Machine-readable provenance and maximum errors' >> "$GITHUB_STEP_SUMMARY"
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            python -c 'import json; d=json.load(open("results/github_actions_suite/suite_results.json")); r=[x for x in d["rows"] if x["python_mode"]=="profile"]; print(json.dumps({"manifest":d["manifest"],"max_errors":{k:max(x[k] for x in r) for k in ["tau_relative_gap","sigma2_relative_gap","max_subspace_angle_deg","reconstruction_relative_gap"]},"passed":d["passed"],"failures":d["failures"]},indent=2))' >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Upload matrices, metrics, provenance and failure logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: original-r-python-comparison
           path: |
