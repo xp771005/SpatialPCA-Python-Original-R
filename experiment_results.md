@@ -1,6 +1,6 @@
 # SpatialPCA 原版 R 与 Python 对照实验结果
 
-**已完成：项目上传至私有仓库；两次 GitHub Actions 均成功。最终复跑 18 项测试、9/9 组数值对照通过，页面无警告或错误注解。仓库保持私有。**
+**已完成：项目已公开，源码现直接展示在仓库中。已记录的 Actions #2 完成 18 项测试和 9/9 组原版 R/Python 对照，页面无警告或错误注解。**
 
 ## 运行记录
 
@@ -14,7 +14,7 @@
 数值实验时间（UTC）：2026-11-21T00:30:24.323929+00:00 至 2026-11-21T00:30:44.061656+00:00。
 Python：3.12.16 (main, Oct 26 2026, 02:50:49) [GCC 13.3.0]。
 
-完整源代码、推导笔记、测试和历史本地结果保存在仓库的 SpatialPCA-Python-with-Original-R-Runner.zip 中，Actions 自动解压后执行。ZIP 内旧报告为历史本地记录，本文件记录新增的实际 Actions 结果。
+Python 源码、脚本、测试和推导笔记已分别展开到 src/、scripts/、tests/、docs/。LaTeX 报告及 PDF 见 docs/SpatialPCA_Short_Note.tex 和 docs/SpatialPCA_Short_Note.pdf。ZIP 保留为历史快照，其内部说明由 main 分支的展开文件取代。当前工作流直接运行仓库根目录源码；下表两次历史运行使用当时的 ZIP 布局。
 
 ## 实验设计
 
@@ -45,7 +45,7 @@ Python：3.12.16 (main, Oct 26 2026, 02:50:49) [GCC 13.3.0]。
 
 ## 日志和修复
 
-两次运行均无失败任务。首次日志提示 checkout@v4、setup-python@v5、upload-artifact@v4 的 Node.js 20 弃用警告。三项均已升级至 v6，并通过第二次完整复跑。仍保留 contents: read 权限及私有仓库检查。另增加完整误差统计和执行清单的机器可读摘要。
+两次运行均无失败任务。首次日志提示 checkout@v4、setup-python@v5、upload-artifact@v4 的 Node.js 20 弃用警告。三项均已升级至 v6，并通过第二次完整复跑。当时保留 contents: read 权限及私有仓库检查；仓库公开后已移除该检查，仍使用只读权限。另增加完整误差统计和执行清单的机器可读摘要。
 
 此前本地检查已修复 Runner 的括号和 SpatialPCs 转置错误，并撤回“作者 R 缺少 log(S)”的错误判断。这些不是本次 Actions 失败日志；作者原版 R 源码未修改。no_log_ablation 仅为人为改变目标函数的消融实验。
 

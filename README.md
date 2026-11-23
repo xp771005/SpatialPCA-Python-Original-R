@@ -1,68 +1,70 @@
-# SpatialPCA Python + Original R Runner
+# SpatialPCA Python + Original R
 
-Private NJIT research project: an independent Python model-core reproduction with a runner for the authors' unmodified R functions. Repository visibility must remain private unless the owner explicitly approves publication.
+Python reproduction of the SpatialPCA model with mathematical derivations and numerical validation against the original R implementation.
 
-## Project files
+## Code and mathematical note
 
-The complete source, derivation notes, tests, demo data and previous local results are in **SpatialPCA-Python-with-Original-R-Runner.zip**. Extract it before using the source paths below. The root Actions workflow extracts the same archive automatically.
+| Path | Contents |
+|---|---|
+| [src/spatialpca_verify](src/spatialpca_verify) | Python model, spatial PCs, prediction, and dense mathematical reference |
+| [scripts](scripts) | Original R runner, shared-input generation, numerical comparison, and nine-case suite |
+| [tests](tests) | 18 mathematical, model, and comparison-gate tests |
+| [docs/SpatialPCA_Short_Note.pdf](docs/SpatialPCA_Short_Note.pdf) | Mathematical note: notation issues, checks, and full derivation |
+| [docs/SpatialPCA_Short_Note.tex](docs/SpatialPCA_Short_Note.tex) | Editable LaTeX source for the note |
+| [docs/formula_audit.md](docs/formula_audit.md) | Working derivation and source-code audit |
+| [data](data) | Synthetic demonstration input |
+| [experiment_results.md](experiment_results.md) | Numerical results and verification scope |
 
-~~~bash
-unzip SpatialPCA-Python-with-Original-R-Runner.zip
-cd SpatialPCA-Mathematical-Verification
+The source is directly browsable in this repository. The ZIP is retained as a historical snapshot of the earlier package; its bundled README, workflow, and status reports are superseded by the expanded files on `main`.
+
+## Verified execution
+
+**[Actions #2 — successful R/Python validation](https://github.com/xp771005/SpatialPCA-Python-Original-R/actions/runs/44843893756)**: 18 tests and all nine shared-input comparisons passed. The runtime deprecation warning from the first run was fixed before this run.
+
+| Quantity | Maximum error in Actions #2 | Pass threshold |
+|---|---:|---:|
+| tau relative gap | 2.35e-7 | 1e-3 |
+| sigma2 relative gap | 1.51e-8 | 1e-5 |
+| W subspace angle | 1.61e-6 degrees | 0.01 degrees |
+| WZ relative gap | 3.17e-8 | 1e-4 |
+
+The public-repository workflow now runs the expanded source directly, with read-only repository permissions. It does not extract the historical ZIP. To run it, open **Actions → Original R vs Python model-core comparison → Run workflow**. Matrices, metrics, per-case logs, dependency versions, input hashes, and R session information are uploaded as `original-r-python-comparison` for 30 days.
+
+## Run Python locally
+
+From the repository root, with Python 3.10 or newer:
+
+```bash
 python -m venv .venv
-# Activate .venv for your operating system, then:
+# Activate .venv for your operating system.
 python -m pip install -r requirements.txt
 python -m pytest -q
-~~~
+python scripts/run_model.py --input data/demo_synthetic.npz --output results/demo_fit_profile.npz --components 2 --bandwidth 0.19
+```
 
-## GitHub Actions evidence
+For direct imports, add `src` to the Python module search path, for example `PYTHONPATH=src` on Linux/macOS. Inputs are normalized expression `Y` (genes × locations) and coordinates (locations × spatial dimensions).
 
-[Actions run #1](https://github.com/xp771005/SpatialPCA-Python-Original-R/actions/runs/44842777863) is the actual GitHub execution record. Use its final status, summary and downloadable artifact as evidence. Historical reports inside the archive describe the earlier local execution; they do not establish the outcome of this Actions run.
+## Compare against the original R implementation
 
-The workflow checks that the repository is private, checks out immutable upstream commit 1d4dbb1fe6f23b77bb7ed805ce2de8bbc017ef66, runs 18 mathematical/model tests and nine matched-input R/Python experiments. It retains logs, matrices, input hashes, dependency versions and metrics in the original-r-python-comparison artifact for 30 days. Workflow permissions are contents: read.
+Install R 4.4.3 and RSpectra, then run from the repository root:
 
-To rerun, open Actions -> Original R vs Python model-core comparison -> Run workflow.
-
-## Experimental design
-
-Seeds 23, 41 and 2026, crossed with expression scales 0.5, 1 and 2. Each case uses 16 genes, 25 spatial positions, 2 components, an intercept-only design, a full-rank Gaussian kernel, bandwidth 0.19 and jitter 1e-8. R and Python receive identical Y, coordinates and K. Optimizer bounds are log(tau) in [-10,10].
-
-| Quantity | Pass threshold |
-|---|---:|
-| tau relative gap | 1e-3 |
-| sigma2 relative gap | 1e-5 |
-| Maximum W subspace angle | 0.01 degrees |
-| WZ relative gap | 1e-4 |
-
-Subspaces and WZ are compared because latent factors may differ by signs or rotations.
-
-## Corrections and scope
-
-The earlier claim that the official R objective omits log(S) was incorrect and is withdrawn. The pinned upstream code explicitly includes log(S). Python no_log_ablation deliberately changes the objective and is only a hypothetical sensitivity control. The runner's unmatched parenthesis and incorrect SpatialPCs transpose were fixed before upload; these were local findings, not Actions failures. Upstream R source is not patched.
-
-This verifies the synthetic full-rank, intercept-only model core. It does not establish replication of SCTransform/SPARK preprocessing, real tissue analyses, the upstream fast approximation, every published figure, or a complete version-specific audit of all paper appendices.
-
-## Source navigation after extraction
-
-| Path | Purpose |
-|---|---|
-| src/spatialpca_verify/model.py | Python model, posterior PCs and prediction |
-| src/spatialpca_verify/core.py | Independent dense mathematical baseline |
-| scripts/run_author_original_r.R | Executes unmodified original R functions |
-| scripts/run_parity_suite.py | Nine cases, provenance, logs and report |
-| scripts/compare_original_r_python.py | Numerical parity gate |
-| docs/formula_audit.md | Derivation and corrected source audit |
-| docs/chinese_notes.md | Chinese explanation and remaining scope |
-| results/local_reference | Previous local execution evidence |
-
-For a local original-R comparison, install R 4.4.3 and RSpectra, then run:
-
-~~~bash
+```bash
+Rscript -e 'install.packages("RSpectra", repos="https://cloud.r-project.org")'
 git clone https://github.com/shangll123/SpatialPCA.git upstream/SpatialPCA
 git -C upstream/SpatialPCA checkout 1d4dbb1fe6f23b77bb7ed805ce2de8bbc017ef66
 python scripts/run_parity_suite.py --output results/new_parity_run
-~~~
+```
 
-Use a new or empty output directory. The suite rejects stale output reuse and modified upstream R files.
+Use a new or empty output directory. The suite rejects stale output reuse and modified upstream R files. The authors' original model-core functions are loaded without patching their source.
 
-SpatialPCA was developed by Lulu Shang and Xiang Zhou. Paper: https://www.nature.com/articles/s41467-022-34879-1 . Official GPL-3.0 source: https://github.com/shangll123/SpatialPCA . The archive does not bundle the upstream R source.
+## Experimental design and scope
+
+Seeds 23, 41, and 2026 are crossed with expression scales 0.5, 1, and 2. Each case uses 16 genes, 25 locations, 2 factors, an intercept-only design, and a full-rank Gaussian kernel (bandwidth 0.19, jitter 1e-8). R and Python receive identical Y, coordinates, and K. Optimization uses log(tau) in [-10, 10]. W is compared through principal angles and WZ because latent factors may differ by signs or rotations.
+
+This validates the **synthetic, intercept-only, full-kernel model core**. It does not reproduce SCTransform/SPARK preprocessing, real tissue analyses, the authors' fast approximation, or every published biological result. The LaTeX note distinguishes dimension-based notation checks from the dissertation determinant issue; it does not claim that every journal-supplement equation has been audited.
+
+## Correction and attribution
+
+An earlier claim that the original R objective omitted log(S) was incorrect and is withdrawn. The pinned R source contains log(S). Python `no_log_ablation` deliberately changes that objective and is only a sensitivity control. Our runner's parenthesis and SpatialPCs-transpose errors were fixed before the recorded Actions runs; the authors' R source was not modified.
+
+SpatialPCA was developed by Lulu Shang and Xiang Zhou. [Paper](https://www.nature.com/articles/s41467-022-34879-1) · [Original R repository](https://github.com/shangll123/SpatialPCA). The upstream repository uses GPL-3.0; upstream R source is fetched at runtime and is not bundled here.
