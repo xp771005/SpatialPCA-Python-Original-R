@@ -10,27 +10,16 @@ jobs:
     env:
       OPENBLAS_NUM_THREADS: '1'
       OMP_NUM_THREADS: '1'
-    defaults:
-      run:
-        working-directory: SpatialPCA-Mathematical-Verification
     steps:
-      - name: Require a private repository
-        working-directory: .
-        env:
-          IS_PRIVATE: ${{ github.event.repository.private }}
-        run: test "$IS_PRIVATE" = "true"
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-      - name: Extract complete project archive
-        working-directory: .
-        run: unzip -q SpatialPCA-Python-with-Original-R-Runner.zip
       - name: Check out immutable original R source
         uses: actions/checkout@v6
         with:
           repository: shangll123/SpatialPCA
           ref: 1d4dbb1fe6f23b77bb7ed805ce2de8bbc017ef66
-          path: SpatialPCA-Mathematical-Verification/upstream/SpatialPCA
+          path: upstream/SpatialPCA
           persist-credentials: false
       - uses: actions/setup-python@v6
         with:
@@ -70,7 +59,7 @@ jobs:
         with:
           name: original-r-python-comparison
           path: |
-            SpatialPCA-Mathematical-Verification/results/github_actions_suite
-            SpatialPCA-Mathematical-Verification/parity_suite.log
+            results/github_actions_suite
+            parity_suite.log
           if-no-files-found: warn
           retention-days: 30
