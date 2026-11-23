@@ -1,0 +1,259 @@
+\documentclass[11pt,letterpaper]{article}
+\usepackage[margin=0.92in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern,microtype}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage[hidelinks]{hyperref}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\definecolor{graytext}{HTML}{555555}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.54em}
+\setlist[itemize]{leftmargin=1.3em,itemsep=0.34em,topsep=0.25em}
+\newcommand{\R}{\mathbb R}
+\newcommand{\tr}{\operatorname{tr}}
+\newcommand{\m}{\mathrm}
+\begin{document}
+\begin{center}
+\url{https://github.com/xp771005/SpatialPCA-Python-Original-R}
+\end{center}
+\vspace{-0.45em}
+
+\section*{1. Issues I noticed, and why}
+
+I started with the published equations and checked their dimensions against the definitions in the text. The main issues I found seem to be in the notation for prediction, rather than in the underlying fitted model.
+
+\textbf{Equation (3): predicting factors at new locations.} The paper describes the cross-covariance matrix $\widetilde\Sigma_l$ as $\widetilde n\times n$ (new locations by measured locations), but the displayed prediction uses $\widetilde\Sigma_l^{\top}\Sigma_l^{-1}z_l$. With $\Sigma_l^{-1}\in\R^{n\times n}$ and $z_l\in\R^n$, this multiplication generally does not conform: the first two factors have shapes $(n\times\widetilde n)(n\times n)$. Under the paper's stated convention, the transpose should be absent. The nearby cross-covariance definition also writes $K(\widetilde s,\widetilde s)$, although its two arguments should be the \emph{new} and \emph{measured} locations, $K(\widetilde s,s)$.
+
+\textbf{Equation (4): reconstructing expression.} The displayed product uses a full loading matrix and a single predicted factor $\widetilde Z_l$. For $d>1$, a loading matrix of shape $m\times d$ cannot multiply a single $1\times\widetilde n$ factor row to produce an $m\times\widetilde n$ expression matrix. I would use the matrix $\widetilde Z$ containing \emph{all} $d$ predicted factors. Whether the covariate contribution should be added back depends on whether the target is centered expression or expression on the original scale.
+
+\textbf{Dissertation Appendix A.1: a determinant factor.} In the dissertation's calculation that integrates out $B$, a displayed factor appears as $|X^{\top}X|^{-1/2}$. If it refers to integrating the \emph{entire} $q\times m$ matrix $B$, the factor is $|X^{\top}X|^{-m/2}$: each of the $m$ columns contributes one $|X^{\top}X|^{-1/2}$. This is a discrepancy in the dissertation expression, not yet a confirmed error in the journal's typeset supplement. With fixed $X$, it is constant in the parameters being optimized.
+
+I also rechecked a concern I had about a missing $\log S$ in the R optimization. That concern was incorrect: the pinned original R code \emph{does} include the logarithm. I would not report it as an error.
+
+\section*{2. How I derived and checked these results}
+
+\textbf{New-location prediction (Eq. 3).} For one spatial factor, I wrote the joint Gaussian distribution of the measured values $z_l$ and the unmeasured values $\widetilde z_l$ as
+\begin{equation}
+\begin{bmatrix} z_l\\ \widetilde z_l \end{bmatrix}
+\sim\mathcal N\!\left(0,
+\begin{bmatrix}
+\Sigma_l & \Sigma_{o*}\\
+\Sigma_{*o} & \Sigma_{**}
+\end{bmatrix}\right),
+\qquad \Sigma_{*o}=\sigma_0^2\tau K(\widetilde s,s).
+\end{equation}
+The usual Gaussian conditional-mean formula gives
+\begin{equation}
+\boxed{\mathbb E[\widetilde z_l\mid z_l]=\Sigma_{*o}\Sigma_l^{-1}z_l},
+\qquad
+(\widetilde n\!\times\! n)(n\!\times\!n)(n\!\times\!1)
+=\widetilde n\!\times\!1.
+\end{equation}
+This both gives the correct orientation and explains why the cross-kernel has to use two different sets of coordinates.
+
+\textbf{Expression reconstruction (Eq. 4).} I went back to the original model,
+\begin{equation}
+Y=(XB)^\top+WZ+E.
+\end{equation}
+For $\widetilde n$ new positions, stacking all predicted factor rows gives $\widetilde Z\in\R^{d\times\widetilde n}$. Therefore the low-rank expression component is
+\begin{equation}
+\boxed{\widehat{\widetilde Y}_{\m{latent}}=\widehat W\widehat{\widetilde Z}}.
+\end{equation}
+If prediction is intended on the uncentered model scale, the conditional mean instead includes $(\widetilde X\widehat B)^\top$.
+
+\textbf{Integrating out $B$ (Appendix A.1).} I defined $Y^*=(Y-WZ)^\top$, $H=X^\top X$ and $M=I_n-XH^{-1}X^\top$. Assuming $X$ has full column rank, the least-squares estimate is $\widehat B=H^{-1}X^\top Y^*$. Completing the square gives
+\begin{equation}
+\|Y^*-XB\|_F^2=
+\|MY^*\|_F^2+
+\tr\!\big[(B-\widehat B)^\top H(B-\widehat B)\big].
+\end{equation}
+Because the columns of $B$ separate in the second term, the Gaussian integral is
+\begin{equation}
+\int_{\R^{q\times m}}
+\exp\!\left[-\frac{\tr((B-\widehat B)^\top H(B-\widehat B))}{2\sigma_0^2}\right]dB
+=\underbrace{\big[(2\pi\sigma_0^2)^{q/2}|H|^{-1/2}\big]^m}_{(2\pi\sigma_0^2)^{qm/2}|H|^{-m/2}}.
+\end{equation}
+This is where the exponent $-m/2$ comes from. It assumes integration over all $B$ with a flat measure; it is not a normalized Bayesian marginal without specifying a proper prior.
+
+Finally, I implemented the model core in Python and compared it with the pinned original R implementation on shared synthetic inputs. The recorded GitHub Actions run passed 18 tests and all nine R--Python comparisons (maximum relative error in $\tau$: $2.35\times10^{-7}$; in $WZ$: $3.17\times10^{-8}$). This supports numerical agreement for the \emph{intercept-only, full-kernel model core}; it does not test the fast approximation or real-data preprocessing. The source, results and run log are in the linked repository.
+
+\section*{3. Full derivation, step by step}
+
+This is the longer calculation I used to connect the model in Eq.~(1) to the parameter estimates in the implementation. I keep the number of covariates $q$ general here, even though the paper uses only an intercept ($q=1$) in its experiments. The derivation assumes $\operatorname{rank}(X)=q<n$, $K\succ0$, $\tau>0$, $W^\top W=I_d$, and $d\le m$.
+
+\textbf{Step 1: Start from the likelihood.}
+The dimensions are $Y\in\R^{m\times n}$, $X\in\R^{n\times q}$, $B\in\R^{q\times m}$, $W\in\R^{m\times d}$, and $Z\in\R^{d\times n}$. With independent errors $E_{ji}\sim\mathcal N(0,\sigma_0^2)$,
+\begin{align}
+Y&=(XB)^\top+WZ+E,\\
+p(Y\mid B,W,Z,\sigma_0^2)
+&=(2\pi\sigma_0^2)^{-mn/2}
+\exp\!\left\{-\frac{\|Y-(XB)^\top-WZ\|_F^2}{2\sigma_0^2}\right\}.
+\label{eq:full-likelihood}
+\end{align}
+Write $Y^*=(Y-WZ)^\top$. Then the squared residual becomes $\|Y^*-XB\|_F^2$.
+
+\textbf{Step 2: Remove the covariate coefficients $B$.}
+Let
+\begin{equation}
+H=X^\top X,\quad \widehat B=H^{-1}X^\top Y^*,\quad
+M=I_n-XH^{-1}X^\top.\label{eq:full-M}
+\end{equation}
+The estimate $\widehat B$ follows by differentiating the residual sum of squares:
+\begin{equation}
+\frac{\partial}{\partial B}\|Y^*-XB\|_F^2
+=-2X^\top Y^*+2X^\top XB=0.
+\end{equation}
+Since $M^2=M$, $M^\top=M$, and $MX=0$,
+\begin{align}
+Y^*-XB&=MY^*+X(\widehat B-B),\\
+\|Y^*-XB\|_F^2
+&=\|MY^*\|_F^2+
+\operatorname{tr}\!\left[(B-\widehat B)^\top H(B-\widehat B)\right].\label{eq:full-Bsquare}
+\end{align}
+The cross term disappears because $X^\top M=0$. For each column $b_j$ of $B$, the Gaussian integral is
+\begin{equation}
+\int_{\R^q}\exp\!\left[-\frac{(b_j-\widehat b_j)^\top H(b_j-\widehat b_j)}{2\sigma_0^2}\right]db_j
+=(2\pi\sigma_0^2)^{q/2}|H|^{-1/2}.
+\end{equation}
+There are $m$ columns, so integrating Eq.~\eqref{eq:full-likelihood} over all of $B$ gives
+\begin{align}
+L_B(Y\mid W,Z,\sigma_0^2)
+&=\int p(Y\mid B,W,Z,\sigma_0^2)\,dB\\
+&=\boxed{(2\pi\sigma_0^2)^{-m(n-q)/2}|H|^{-m/2}
+\exp\!\left[-\frac{\operatorname{tr}\{(Y-WZ)M(Y-WZ)^\top\}}{2\sigma_0^2}\right].}
+\label{eq:full-Bintegral}
+\end{align}
+I have used a flat measure for $B$ in this step. The result is an integrated-likelihood kernel, not a normalized Bayesian marginal from a proper prior. The $|H|^{-m/2}$ factor is fixed when $X$ is fixed.
+
+\textbf{Step 3: Specify the spatial prior for $Z$.}
+The rows $z_l=Z_{l\cdot}^\top\in\R^n$ are independent, with
+\begin{equation}
+z_l\sim\mathcal N_n(0,\sigma_0^2\tau K),\qquad l=1,\ldots,d.
+\end{equation}
+Their joint density is
+\begin{equation}
+p(Z\mid\sigma_0^2,\tau)
+=(2\pi\sigma_0^2)^{-nd/2}\tau^{-nd/2}|K|^{-d/2}
+\exp\!\left[-\frac{\operatorname{tr}(ZK^{-1}Z^\top)}{2\sigma_0^2\tau}\right].
+\label{eq:full-prior}
+\end{equation}
+
+\textbf{Step 4: Integrate out $Z$ by completing another square.}
+Multiplying Eqs.~\eqref{eq:full-Bintegral} and~\eqref{eq:full-prior} gives a $Z$-dependent quadratic
+\begin{align}
+Q(Z)&=\operatorname{tr}\{(Y-WZ)M(Y-WZ)^\top\}
++\tau^{-1}\operatorname{tr}(ZK^{-1}Z^\top)\\
+&=\operatorname{tr}(YMY^\top)-2\operatorname{tr}(W^\top YMZ^\top)
++\operatorname{tr}\{Z(M+\tau^{-1}K^{-1})Z^\top\}.
+\label{eq:full-Q}
+\end{align}
+In the second line I used $W^\top W=I_d$. Define
+\begin{equation}
+A_\tau=M+\tau^{-1}K^{-1},\qquad F_\tau=A_\tau^{-1},\qquad
+C=W^\top YM.
+\end{equation}
+As $A_\tau$ is positive definite, the square can be completed exactly:
+\begin{align}
+Q(Z)
+&=\operatorname{tr}\!\left[(Z-CF_\tau)A_\tau(Z-CF_\tau)^\top\right]+S(W,\tau),\\
+S(W,\tau)
+&=\operatorname{tr}(YMY^\top)
+-\operatorname{tr}(W^\top YMF_\tau MY^\top W).
+\label{eq:full-S}
+\end{align}
+Each of the $d$ rows contributes an $n$-dimensional Gaussian integral:
+\begin{equation}
+\int_{\R^{d\times n}}\exp\!\left[-\frac{Q(Z)}{2\sigma_0^2}\right]dZ
+=(2\pi\sigma_0^2)^{nd/2}|A_\tau|^{-d/2}
+\exp\!\left[-\frac{S(W,\tau)}{2\sigma_0^2}\right].
+\end{equation}
+The determinant from this integral simplifies because
+\begin{align}
+|A_\tau|
+&=|\tau^{-1}K^{-1}|\,|I_n+\tau KM|\\
+&=\tau^{-n}|K|^{-1}|I_n+\tau MK|,
+\end{align}
+where the last equality uses $|I+AB|=|I+BA|$. After collecting the normalizing factors, the integrated likelihood is, up to constants independent of $W$, $\tau$, and $\sigma_0^2$,
+\begin{equation}
+\boxed{\mathcal L(W,\tau,\sigma_0^2)\ \propto\
+(\sigma_0^2)^{-m(n-q)/2}|I_n+\tau MK|^{-d/2}
+\exp\!\left[-\frac{S(W,\tau)}{2\sigma_0^2}\right].}
+\label{eq:full-marginal}
+\end{equation}
+
+\textbf{Step 5: Estimate $\sigma_0^2$, $W$, and $\tau$.}
+For fixed $W$ and $\tau$, put $N=m(n-q)$ and $v=\sigma_0^2$. The log-likelihood terms involving $v$ are
+\begin{equation}
+\ell(v)=-\frac N2\log v-\frac{S(W,\tau)}{2v}+\mathrm{const}.
+\end{equation}
+Differentiating and setting the result to zero,
+\begin{equation}
+-\frac{N}{2v}+\frac{S(W,\tau)}{2v^2}=0
+\qquad\Longrightarrow\qquad
+\boxed{\widehat\sigma_0^2=\frac{S(W,\tau)}{m(n-q)}}.
+\label{eq:full-sigma}
+\end{equation}
+For fixed $\tau$, define the symmetric, positive-semidefinite matrix
+\begin{equation}
+G_\tau=YMF_\tau MY^\top\in\R^{m\times m}.
+\end{equation}
+Minimizing $S$ is equivalent to maximizing $\operatorname{tr}(W^\top G_\tau W)$ subject to $W^\top W=I_d$. By the Rayleigh--Ritz/Ky Fan principle, the columns of $\widehat W_\tau$ span the top $d$ eigenspace of $G_\tau$. Thus
+\begin{equation}
+S_*(\tau)=\operatorname{tr}(YMY^\top)-\sum_{l=1}^d\lambda_l(G_\tau),
+\end{equation}
+where the eigenvalues are sorted from largest to smallest. Substituting $\widehat\sigma_0^2$ into Eq.~\eqref{eq:full-marginal} gives the one-dimensional objective
+\begin{equation}
+\boxed{J(\tau)=\frac{m(n-q)}2\log S_*(\tau)
++\frac d2\log|I_n+\tau MK|,\qquad
+\widehat\tau=\arg\min_{\tau>0}J(\tau).}
+\label{eq:full-profile}
+\end{equation}
+In practice, $\eta=\log\tau$ is convenient for numerical optimization. This derivation also explains why a $\log S_*$ term belongs in the R/Python objective; the original R implementation indeed contains it.
+
+\textbf{Step 6: Recover the spatial factors and covariate coefficients.}
+From the completed square in Eq.~\eqref{eq:full-Q}, the posterior distribution for each row (after integrating $B$) is
+\begin{equation}
+z_l\mid Y,W,\tau,\sigma_0^2\sim
+\mathcal N_n\!\left(F_\tau MY^\top w_l,\,\sigma_0^2F_\tau\right).
+\end{equation}
+Therefore the posterior-mean spatial PCs and the estimated covariate coefficients are
+\begin{align}
+\boxed{\widehat Z=\widehat W^\top YM F_{\widehat\tau}},\qquad
+\boxed{\widehat B=(X^\top X)^{-1}X^\top
+(Y-\widehat W\widehat Z)^\top}.
+\label{eq:full-ZB}
+\end{align}
+The individual columns of $W$ need not match between two runs because an orthogonal rotation of the factors leaves $WZ$ unchanged. That is why I compared the loading subspace and reconstructed $WZ$ in the R/Python tests.
+
+\textbf{Step 7: Predict at unobserved locations.}
+Let $K_{oo}=K(s,s)\in\R^{n\times n}$ and $K_{*o}=K(\widetilde s,s)\in\R^{\widetilde n\times n}$. The joint prior for a factor at measured and new locations is Gaussian. Conditioning on the measured factor values gives
+\begin{align}
+\mathbb E[\widetilde z_l\mid z_l]
+&=(\sigma_0^2\tau K_{*o})(\sigma_0^2\tau K_{oo})^{-1}z_l\\
+&=\boxed{K_{*o}K_{oo}^{-1}z_l}.
+\end{align}
+Applying this map to all $d$ estimated factor rows produces $\widehat{\widetilde Z}\in\R^{d\times\widetilde n}$. The low-rank predicted expression is $\widehat W\widehat{\widetilde Z}$; if we want the model's uncentered conditional mean, we also add $(\widetilde X\widehat B)^\top$. This is why I interpreted Eqs.~(3)--(4) as notation issues in Section 1 rather than evidence of incorrect fitted parameters.
+
+\textbf{Step 8: A note on the computational form.}
+The determinant and inverse can be evaluated without repeatedly inverting $K^{-1}$. Write $P=I_n+\tau K$ and $A_0=I_n+\tau^{-1}K^{-1}$; then
+\begin{align}
+|I_n+\tau MK|
+&=|P|\,\frac{|X^\top P^{-1}X|}{|X^\top X|},\label{eq:full-det}\\[2pt]
+F_\tau
+&=A_0^{-1}+A_0^{-1}X
+\big(X^\top X-X^\top A_0^{-1}X\big)^{-1}
+X^\top A_0^{-1}.\label{eq:full-woodbury}
+\end{align}
+The second identity follows from Woodbury after writing $M=I_n-X(X^\top X)^{-1}X^\top$. If $K=UDU^\top$ with $U$ square and orthogonal, the simpler inverse is
+\begin{equation}
+A_0^{-1}=U\,\operatorname{diag}\!\left(
+\frac{\tau\delta_i}{1+\tau\delta_i}\right)U^\top.
+\end{equation}
+One should not substitute the inverse of a truncated rank-$r$ kernel $K_r=U_rD_rU_r^\top$ into these full-rank identities: $K_r$ is singular when $r<n$. A model using a rank-$r$ Gaussian prior instead leads to the restricted operator
+\begin{equation}
+F_r=U_r\big(\tau^{-1}D_r^{-1}+U_r^\top MU_r\big)^{-1}U_r^\top.
+\end{equation}
+I treat this as a separate approximation, not as an error in the original software. The GitHub comparison reported above tested the \emph{full-kernel} case.
+
+\end{document}
