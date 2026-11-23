@@ -80,7 +80,7 @@ Finally, I implemented the model core in Python and compared it with the pinned 
 
 \section*{3. Full derivation, step by step}
 
-This is the longer calculation I used to connect the model in Eq.~(1) to the parameter estimates in the implementation. I keep the number of covariates $q$ general here, even though the paper uses only an intercept ($q=1$) in its experiments. The derivation assumes $\operatorname{rank}(X)=q<n$, $K\succ0$, $\tau>0$, $W^\top W=I_d$, and $d\le m$.
+This is the longer calculation I used to connect the model in Eq.~(1) to the parameter estimates in the implementation. I keep the number of covariates $q$ general here, even though the paper uses only an intercept ($q=1$) in its experiments. The derivation assumes $\operatorname{rank}(X)=q$, $q<n$, $K\succ0$, $\tau>0$, $W^\top W=I_d$, and $d\le m$.
 
 \textbf{Step 1: Start from the likelihood.}
 The dimensions are $Y\in\R^{m\times n}$, $X\in\R^{n\times q}$, $B\in\R^{q\times m}$, $W\in\R^{m\times d}$, and $Z\in\R^{d\times n}$. With independent errors $E_{ji}\sim\mathcal N(0,\sigma_0^2)$,
