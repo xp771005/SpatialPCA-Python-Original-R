@@ -28,6 +28,8 @@ The source is directly browsable in this repository. The ZIP is retained as a hi
 | W subspace angle | 1.61e-6 degrees | 0.01 degrees |
 | WZ relative gap | 3.17e-8 | 1e-4 |
 
+**[Actions #3 — expanded-source public rerun](https://github.com/xp771005/SpatialPCA-Python-Original-R/actions/runs/45236586819)** also passed all 18 tests and all nine comparisons on November 23, 2026 (attempt 2, 7m 31s). Its maximum errors match Actions #2. Attempt 1 was manually canceled during R environment setup; it did not reach the parity suite.
+
 The public-repository workflow now runs the expanded source directly, with read-only repository permissions. It does not extract the historical ZIP. To run it, open **Actions → Original R vs Python model-core comparison → Run workflow**. Matrices, metrics, per-case logs, dependency versions, input hashes, and R session information are uploaded as `original-r-python-comparison` for 30 days.
 
 ## Run Python locally

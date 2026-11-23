@@ -1,26 +1,35 @@
 # SpatialPCA 原版 R 与 Python 对照实验结果
 
-**已完成：项目已公开，源码现直接展示在仓库中。已记录的 Actions #2 完成 18 项测试和 9/9 组原版 R/Python 对照，页面无警告或错误注解。**
+**已完成：项目已公开，源码直接展示在仓库中。历史 Actions #2 与公开源码布局下的 Actions #3（第 2 次尝试）均完成 18 项测试和 9/9 组原版 R/Python 对照。最新成功尝试页面无警告或错误注解。**
 
 ## 运行记录
 
 | 运行 | 记录 | 结果 |
 |---|---|---|
 | 首次运行 | https://github.com/xp771005/SpatialPCA-Python-Original-R/actions/runs/44842777863 | 成功，4 分 49 秒；出现 Actions 运行时弃用警告 |
-| 修复后复跑 | https://github.com/xp771005/SpatialPCA-Python-Original-R/actions/runs/44843893756 | 成功，3 分 44 秒；无警告或错误注解 |
+| 修复后复跑（#2） | https://github.com/xp771005/SpatialPCA-Python-Original-R/actions/runs/44843893756 | 成功，3 分 44 秒；无警告或错误注解 |
+| 公开源码布局复跑（#3，第 2 次尝试） | https://github.com/xp771005/SpatialPCA-Python-Original-R/actions/runs/45236586819 | 成功，7 分 31 秒；18 项测试、9/9 对照通过，无警告或错误注解 |
 
-最终执行 commit：2b2a8445089169e3dc30789850fd8c117d49d43e。
+Actions #2 执行 commit：2b2a8445089169e3dc30789850fd8c117d49d43e。
 上游 R commit：1d4dbb1fe6f23b77bb7ed805ce2de8bbc017ef66；原始 R 文件执行前后哈希一致。
 数值实验时间（UTC）：2026-11-21T00:30:24.323929+00:00 至 2026-11-21T00:30:44.061656+00:00。
 Python：3.12.16 (main, Oct 26 2026, 02:50:49) [GCC 13.3.0]。
 
-Python 源码、脚本、测试和推导笔记已分别展开到 src/、scripts/、tests/、docs/。LaTeX 报告及 PDF 见 docs/SpatialPCA_Short_Note.tex 和 docs/SpatialPCA_Short_Note.pdf。ZIP 保留为历史快照，其内部说明由 main 分支的展开文件取代。当前工作流直接运行仓库根目录源码；下表两次历史运行使用当时的 ZIP 布局。
+Python 源码、脚本、测试和推导笔记已分别展开到 src/、scripts/、tests/、docs/。LaTeX 报告及 PDF 见 docs/SpatialPCA_Short_Note.tex 和 docs/SpatialPCA_Short_Note.pdf。ZIP 保留为历史快照，其内部说明由 main 分支的展开文件取代。当前工作流直接运行仓库根目录源码；上述两次历史运行使用当时的 ZIP 布局。
+
+## Actions #3：公开源码布局验证
+
+本次直接运行 main 分支展开的源码；已移除私有仓库检查、ZIP 解压和旧工作目录。执行 commit：25fe30bdb52bcd8f087034b2eefcbb9fd4f49a26。对照实验时间（UTC）：2026-11-23T18:32:31.565883+00:00 至 2026-11-23T18:32:51.418841+00:00。
+
+18 项测试及九组数值对照全部通过，最大 tau、sigma2、W 角度和 WZ 误差与下列 Actions #2 记录一致。上游 R commit 相同，原始源文件执行前后哈希一致。结果 artifact 已成功上传。
+
+第 1 次尝试在 R 环境准备阶段被人为取消（8 分 27 秒），没有运行对照实验，也未产生实验结果包。原始日志显示系统依赖后来恢复安装；这次取消不能视为算法失败。第 2 次尝试在新运行环境中完整通过，未修改模型计算逻辑。
 
 ## 实验设计
 
 三个随机种子 23、41、2026，分别将 Y 乘以 0.5、1、2；共九组。每组 16 基因、25 位置、2 潜在因子。截距设计，完整 Gaussian 核，bandwidth=0.19，jitter=1e-8，log(tau) 范围 [-10,10]。R 与 Python 共享相同 Y、坐标和 K，输入保留 SHA-256。载荷使用子空间角度比较，重建使用 WZ，消除符号或旋转差异。
 
-## 最终复跑结果
+## Actions #2 数值结果
 
 | 种子 | Y 倍数 | R tau | Python tau | tau 相对误差 | W 角度（度） | WZ 相对误差 | 判定 |
 |---:|---:|---:|---:|---:|---:|---:|:---|
@@ -41,19 +50,19 @@ Python 源码、脚本、测试和推导笔记已分别展开到 src/、scripts/
 | W 子空间角度（度） | 0.000001609805156298844 | 0.01 |
 | WZ 相对误差 | 3.169638612845529e-8 | 1e-4 |
 
-九组全部满足门槛，缩放 Y 后的 tau 在数值精度内保持不变。
+Actions #2 和 #3 的九组对照均满足门槛，缩放 Y 后的 tau 在数值精度内保持不变。
 
 ## 日志和修复
 
-两次运行均无失败任务。首次日志提示 checkout@v4、setup-python@v5、upload-artifact@v4 的 Node.js 20 弃用警告。三项均已升级至 v6，并通过第二次完整复跑。当时保留 contents: read 权限及私有仓库检查；仓库公开后已移除该检查，仍使用只读权限。另增加完整误差统计和执行清单的机器可读摘要。
+历史 Actions #1 和 #2 均无失败任务。首次日志提示 checkout@v4、setup-python@v5、upload-artifact@v4 的 Node.js 20 弃用警告。三项均已升级至 v6，并通过第二次完整复跑。当时保留 contents: read 权限及私有仓库检查；仓库公开后已移除该检查，仍使用只读权限。另增加完整误差统计和执行清单的机器可读摘要。
 
 此前本地检查已修复 Runner 的括号和 SpatialPCs 转置错误，并撤回“作者 R 缺少 log(S)”的错误判断。这些不是本次 Actions 失败日志；作者原版 R 源码未修改。no_log_ablation 仅为人为改变目标函数的消融实验。
 
 ## 原始证据
 
-每次 Actions 的 original-r-python-comparison artifact 包含输入、R/Python 矩阵、逐组日志、CSV/JSON 指标、哈希、依赖版本和 R sessionInfo，保留 30 天。当前浏览器下载结果包超时，本轮未另存原始结果包；可从上述运行页面下载。报告数据直接来自运行摘要。
+每次 Actions 的 original-r-python-comparison artifact 包含输入、R/Python 矩阵、逐组日志、CSV/JSON 指标、哈希、依赖版本和 R sessionInfo，保留 30 天。本报告数据直接来自运行摘要；可从上述成功运行页面下载原始结果包。
 
-执行项目包 SHA-256：73e5dbf1a4187f55527c4646908fc55ed5cd73e28793e337e8eb9471ba0eb534。
+历史 Actions #2 执行项目包 SHA-256：73e5dbf1a4187f55527c4646908fc55ed5cd73e28793e337e8eb9471ba0eb534。
 
 ## 与 NJIT 要求的关系及限制
 
